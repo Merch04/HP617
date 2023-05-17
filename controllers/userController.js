@@ -215,9 +215,12 @@ class userController {
   //Получить полный список пользователей или по ФИО
   //
   //На вход в body:
-  //      name            string
-  //      surname         string
-  //      middlename      string
+  //      s1            string  
+  //      s2            string
+  //      s3            string
+  //
+  //Функция перебирает все возможные варианты ФИО,ИФО,ФОИ и тд
+  //  поэтому не имеет значения в какой из параметров передавать Имя или др
   //
   //Возвращается список с моделями вида id, ФИО, role 
   //    если STUDENT, то поиск будет идти только по преподам
@@ -228,51 +231,53 @@ class userController {
 
     let arrStrings = [s1, s2, s3]
     let foundUsers = []
-    for (let iteration = 0; iteration < 6; iteration++) {
-      let users = await User.findAll({
-        attributes: ['id', 'name', 'surname', 'middlename', 'role'],
-        where: {
-          name: {
-            [Op.like]: (arrStrings[0] == null) ?
-              '%' : arrStrings[0].charAt(0).toUpperCase() + arrStrings[0].slice(1) + '%'
+    try {
+      for (let iteration = 0; iteration < 6; iteration++) {
+        let users = await User.findAll({
+          attributes: ['id', 'name', 'surname', 'middlename', 'role'],
+          where: {
+            name: {
+              [Op.like]: (arrStrings[0] == null) ?
+                '%' : arrStrings[0].charAt(0).toUpperCase() + arrStrings[0].slice(1) + '%'
+            },
+            surname: {
+              [Op.like]: (arrStrings[1] == null) ?
+                '%' : arrStrings[1].charAt(0).toUpperCase() + arrStrings[1].slice(1) + '%'
+            },
+            middlename: {
+              [Op.like]: (arrStrings[2] == null) ?
+                '%' : arrStrings[2].charAt(0).toUpperCase() + arrStrings[2].slice(1) + '%'
+            },
+            role: {
+              [Op.in]: roleFind
+            }
           },
-          surname: {
-            [Op.like]: (arrStrings[1] == null) ?
-              '%' : arrStrings[1].charAt(0).toUpperCase() + arrStrings[1].slice(1) + '%'
-          },
-          middlename: {
-            [Op.like]: (arrStrings[2] == null) ?
-              '%' : arrStrings[2].charAt(0).toUpperCase() + arrStrings[2].slice(1) + '%'
-          },
-          role: {
-            [Op.in]: roleFind
-          }
-        },
-        raw: true
-      },)
-      if (iteration == 2) {
-        [arrStrings[1], arrStrings[2]] = [arrStrings[2], arrStrings[1]]
-      }
-      else {
-        [arrStrings[0], arrStrings[2]] = [arrStrings[2], arrStrings[0]]
-        [arrStrings[1], arrStrings[0]] = [arrStrings[0], arrStrings[1]]
-      }
-      const onlyUnique = (value, index, array) => {
-        return array.indexOf(value) === index;
+          raw: true
+        },)
+        if (iteration == 2) {
+          [arrStrings[1], arrStrings[2]] = [arrStrings[2], arrStrings[1]]
+        }
+        else {
+          [arrStrings[0], arrStrings[2]] = [arrStrings[2], arrStrings[0]]
+          [arrStrings[1], arrStrings[0]] = [arrStrings[0], arrStrings[1]]
+        }
+        const onlyUnique = (value, index, array) => {
+          return array.indexOf(value) === index;
+        }
+
+        if (users.length != 0) {
+          users.concat(foundUsers)
+          foundUsers = users.filter(onlyUnique);
+        }
+
       }
 
-      if (users.length != 0) {
-        users.concat(foundUsers)
-        foundUsers = users.filter(onlyUnique);
+      if (foundUsers.length == 0) {
+        return res.status(204).json()
       }
 
-    }
-
-    if (foundUsers.length == 0) {
-      return res.status(204).json()
-    }
-
-    return res.status(200).json(foundUsers)
+      return res.status(200).json(foundUsers)
+    } catch (e) { return next(ApiCodes.badRequest(e)) }
   }
 
   //Изменение данных пользователя
